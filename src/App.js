@@ -11,8 +11,8 @@ function App() {
   useEffect(() => {
     WebViewer(
       {
-        path: '/webviewer/lib',
-        initialDoc: '/files/sample.pdf',
+        path: '/webiewer/lib',
+        initialDoc: `/files/${documentId}`,
       },
       viewer.current,
     ).then((instance) => {
@@ -24,7 +24,7 @@ function App() {
         if(info.imported){
           return;
         }
-        
+
         if (action === "add" || action === "modify" || action === "delete") {
           annotationManager.exportAnnotationCommand().then((xfdfString) => {
             socket.current.send(JSON.stringify({xfdf: xfdfString, documentId: documentId}));
