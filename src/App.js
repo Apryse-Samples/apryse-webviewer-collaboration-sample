@@ -6,6 +6,7 @@ function App() {
   const viewer = useRef(null);
   const socket = useRef(null);
   const wvInstance = useRef(null);
+  const documentId = "sample.pdf";
 
   useEffect(() => {
     WebViewer(
@@ -19,10 +20,14 @@ function App() {
 
       const {annotationManager} = instance.Core;
 
-      annotationManager.addEventListener("annotationChanged", (annotations, action) => {
+      annotationManager.addEventListener("annotationChanged", (annotations, action, info) => {
+        if(info.imported){
+          return;
+        }
+        
         if (action === "add" || action === "modify" || action === "delete") {
           annotationManager.exportAnnotationCommand().then((xfdfString) => {
-            socket.current.send(xfdfString);
+            socket.current.send(JSON.stringify({xfdf: xfdfString, documentId: documentId}));
           });
         }
       });
@@ -32,16 +37,13 @@ function App() {
 
   useEffect(() => {
     socket.current = new WebSocket("ws://localhost:8080");
-
-    socket.current.addEventListener("open", event => {
-      socket.current.send("Connection established")
-    });
     
     // Listen for messages
-    socket.current.addEventListener("message", event => {
-      wvInstance.current.Core.annotationManager.importAnnotationCommand(event.data);
-      wvInstance.current.Core.documentViewer.refreshAll();
-      wvInstance.current.Core.documentViewer.updateView();
+    socket.current.addEventListener("message", async (event) => {
+      const data = JSON.parse(event.data);
+
+      const annotations = await wvInstance.current.Core.annotationManager.importAnnotationCommand(data.xfdf);
+      await wvInstance.current.Core.annotationManager.drawAnnotationsFromList(annotations);
     });
 
   },[])
